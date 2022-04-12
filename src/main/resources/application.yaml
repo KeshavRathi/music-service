@@ -1,0 +1,12 @@
+server:
+  port: 8081
+
+spring:
+  mvc:
+    servlet:
+      path: /musify
+
+
+  jackson:
+    serialization:
+      FAIL_ON_EMPTY_BEANS: false
