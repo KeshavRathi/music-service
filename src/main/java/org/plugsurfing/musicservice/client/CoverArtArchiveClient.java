@@ -4,10 +4,12 @@ import java.util.UUID;
 
 import javax.annotation.PostConstruct;
 
+import org.springframework.http.client.reactive.ReactorClientHttpConnector;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
 
-import reactor.core.publisher.Mono;
+import reactor.core.publisher.Flux;
+import reactor.netty.http.client.HttpClient;
 
 @Component
 public class CoverArtArchiveClient {
@@ -16,14 +18,14 @@ public class CoverArtArchiveClient {
 
     @PostConstruct
     public void init() {
-        this.client = WebClient.builder().baseUrl("http://coverartarchive.org/release-group").build();
+        this.client = WebClient.builder().baseUrl("http://coverartarchive.org/release-group/").//
+                clientConnector(new ReactorClientHttpConnector(HttpClient.create().followRedirect(true))).build();
     }
 
-    public Mono<String> getArtistInformationByIdFromMusicBainz(final UUID id) {
+    public Flux<String> getArtistCoverInformation(final UUID id) {
 
         return this.client.get().uri(id.toString())//
-//                .accept(MediaType.APPLICATION_JSON)//
                 .retrieve()//
-                .bodyToMono(String.class);
+                .bodyToFlux(String.class);
     }
 }

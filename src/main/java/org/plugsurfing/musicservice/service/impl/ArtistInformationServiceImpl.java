@@ -1,5 +1,7 @@
 package org.plugsurfing.musicservice.service.impl;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 import org.apache.logging.log4j.LogManager;
@@ -10,11 +12,13 @@ import org.plugsurfing.musicservice.client.CoverArtArchiveClient;
 import org.plugsurfing.musicservice.client.MusicBainzClient;
 import org.plugsurfing.musicservice.client.WikiDataClient;
 import org.plugsurfing.musicservice.client.WikipediaClient;
+import org.plugsurfing.musicservice.dto.AlbumDto;
 import org.plugsurfing.musicservice.dto.ArtistInformationDto;
 import org.plugsurfing.musicservice.service.ArtistInformationService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.util.function.Tuple2;
 
@@ -44,6 +48,41 @@ public class ArtistInformationServiceImpl implements ArtistInformationService {
             final String name = artistInfo.getString("name");
             logger.info("Name: {}", name);
         });
+
+//        artistMBInfo.zipWhen(mbinfo-> {
+//           return Flux.empty();
+//        });
+
+        final Mono<List<AlbumDto>> artistAlbumInfoMono = artistMBInfo.map(value -> {
+            final JSONObject artistInfo = new JSONObject(value);
+            final JSONArray artistAlbumArray = artistInfo.getJSONArray("release-groups");
+            final List<AlbumDto> albumDtoList = new ArrayList<>();
+
+            for (int i = 0; i < artistAlbumArray.length(); i++) {
+                final JSONObject jsonObject = artistAlbumArray.getJSONObject(i);
+                final AlbumDto albumDto = new AlbumDto(UUID.fromString(jsonObject.getString("id")),
+                        jsonObject.getString("title"), null);
+                albumDtoList.add(albumDto);
+            }
+            return albumDtoList;
+        });
+
+//        final Mono<Tuple2<List<AlbumDto>, List<Mono<String>>>> zipWhen = artistAlbumInfoMono.zipWhen(list -> {
+//            final List<Mono<String>> collect = list.stream()
+//                    .map(dto -> this.coverArtArchiveClient.getArtistCoverInformation(dto.getId()))
+//                    .collect(Collectors.toList());
+//            return Mono.just(collect);
+//
+//        });
+
+        final Flux<AlbumDto> artistAlbumInfoFlux = artistAlbumInfoMono.flatMapIterable(list -> list);
+        final Flux<String> flatMap = artistAlbumInfoFlux.flatMap(albumDto -> {
+            final Flux<String> artistCoverInformation = this.coverArtArchiveClient
+                    .getArtistCoverInformation(albumDto.getId());
+            return this.coverArtArchiveClient.getArtistCoverInformation(albumDto.getId());
+        }).log();
+
+        flatMap.subscribe();
 
         final Mono<Tuple2<String, String>> mono = artistMBInfo.zipWhen(mbInfo -> {
             final JSONObject artistInfo = new JSONObject(mbInfo);

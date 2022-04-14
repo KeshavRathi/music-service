@@ -1,11 +1,12 @@
 server:
   port: 8081
 
+server.servlet.context-path: /baeldung
+
 spring:
   mvc:
     servlet:
       path: /musify
-
 
   jackson:
     serialization:
