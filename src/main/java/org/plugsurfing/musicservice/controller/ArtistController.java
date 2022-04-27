@@ -25,7 +25,7 @@ public class ArtistController {
 
     @GetMapping("/details/{mbid}")
     public Mono<ArtistInformationDto> getArtistDetails(@PathVariable final UUID mbid) {
-        logger.info("mbid : {}", mbid);
+        logger.info("Received mbid : {}", mbid);
         final ArtistInformationDto artistInformationDto = new ArtistInformationDto();
         artistInformationDto.setMbid(mbid);
         return this.artistInformationService.getArtistInformation(mbid);

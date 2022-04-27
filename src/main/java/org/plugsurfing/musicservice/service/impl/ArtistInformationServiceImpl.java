@@ -42,14 +42,14 @@ public class ArtistInformationServiceImpl implements ArtistInformationService {
         artistMBInfo.subscribe(value -> {
             final JSONObject artistInfo = new JSONObject(value);
             final String name = artistInfo.getString("name");
-            logger.info("Name: {}", name);
+            logger.info("Name of the artist: {}", name);
         });
 
         final Mono<Tuple2<String, String>> mono = artistMBInfo.zipWhen(mbInfo -> {
             final JSONObject artistInfo = new JSONObject(mbInfo);
             final JSONArray artistRelations = artistInfo.getJSONArray("relations");
             final String wikidataFromArtistInfo = this.getWikidataFromArtistInfo(artistRelations);
-            logger.info("WikiData: {}", wikidataFromArtistInfo);
+            logger.info("WikiData id: {}", wikidataFromArtistInfo);
             return this.wikiDataClient.getWikidataForId(wikidataFromArtistInfo);
         });
 

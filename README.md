@@ -104,6 +104,7 @@ The main logic of the code is in ArtistInformationServiceImpl and ArtistControll
 ## Short comings in current state
 1. Currently the list of cover art is not getting populated. Few experiments around it are in "test" branch.
 2. JSON Objects from API responses have been manipulated in raw form. Response DTOs can be created with the interested fields and rest fields can be ignored via Jackson Configuration.
+3. Custom exception handling has to be done.
 
 ## Proposed Improvements
 1. Adding a Cache Manager and integrating Spring boot caching to cache API responses for given MBID. This will reduce the number of API calls to external system and will also be faster
