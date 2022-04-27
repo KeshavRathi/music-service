@@ -15,7 +15,7 @@ import org.springframework.web.bind.annotation.RestController;
 import reactor.core.publisher.Mono;
 
 @RestController
-@RequestMapping("/music-artist")
+@RequestMapping("/musify/music-artist")
 public class ArtistController {
 
     private static final Logger logger = LogManager.getLogger(ArtistController.class);
