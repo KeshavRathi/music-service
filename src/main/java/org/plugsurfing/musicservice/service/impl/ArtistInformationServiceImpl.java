@@ -1,5 +1,6 @@
 package org.plugsurfing.musicservice.service.impl;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -13,12 +14,15 @@ import org.plugsurfing.musicservice.client.MusicBainzClient;
 import org.plugsurfing.musicservice.client.WikiDataClient;
 import org.plugsurfing.musicservice.client.WikipediaClient;
 import org.plugsurfing.musicservice.client.dto.ArtistMusicBainzInfoDto;
+import org.plugsurfing.musicservice.client.dto.ArtistMusicBainzInfoDto.ReleaseGroupsDto;
 import org.plugsurfing.musicservice.client.dto.WikipediaInfoDto;
+import org.plugsurfing.musicservice.dto.AlbumDto;
 import org.plugsurfing.musicservice.dto.ArtistInformationDto;
 import org.plugsurfing.musicservice.service.ArtistInformationService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 @Service
@@ -65,20 +69,34 @@ public class ArtistInformationServiceImpl implements ArtistInformationService {
             return this.wikipediaClient.getWikipediaInformation(this.getWikipediaTitle(wikiDataJson));
         }, (mbInfo, b) -> new ImmutablePair<ArtistMusicBainzInfoDto, WikipediaInfoDto>(mbInfo.getLeft(), b));
 
-        return wikipediaDataMono.map(tuple -> {
+        final Flux<ReleaseGroupsDto> flatMapIterable = artistMBInfo.flatMapIterable(value -> value.getReleaseGroups());
+        flatMapIterable
+                .flatMap(
+                        s -> this.coverArtArchiveClient.getArtistInformationByIdFromMusicBainz(s.getId(), s.getTitle()))
+                .collectList();
+
+        final Mono<List<AlbumDto>> listOfAlbumDtoMono = flatMapIterable
+                .flatMap(
+                        s -> this.coverArtArchiveClient.getArtistInformationByIdFromMusicBainz(s.getId(), s.getTitle()))
+                .collectList();
+
+        return Mono.zip(wikipediaDataMono, listOfAlbumDtoMono, (tuple, albums) -> {
+
             final WikipediaInfoDto wikipediaData = tuple.getRight();
             final String wikipediaDescription = wikipediaData.getExtract();
 
-            final JSONObject artistInfo = new JSONObject(tuple.getLeft());
-            final ArtistInformationDto dto = ArtistInformationDto.builder().mbid(mbId)//
-                    .name(artistInfo.getString("name"))//
-                    .description(wikipediaDescription)//
-                    .country(artistInfo.getString("country"))//
-                    .disambiguation(artistInfo.getString("disambiguation"))//
-                    .gender(artistInfo.getString("gender")).build();
+            final ArtistMusicBainzInfoDto artistMusicBainzInfoDto = tuple.getLeft();
+            final ArtistInformationDto dto = ArtistInformationDto.builder().mbid(mbId) //
+                    .name(artistMusicBainzInfoDto.getName()) //
+                    .description(wikipediaDescription) //
+                    .country(artistMusicBainzInfoDto.getCountry())//
+                    .disambiguation(artistMusicBainzInfoDto.getDisambiguation()) //
+                    .gender(artistMusicBainzInfoDto.getGender()) //
+                    .albums(albums).build();
 
             return dto;
         });
+
     }
 
     private String getWikipediaTitle(final JSONObject wikiDataJson) {
