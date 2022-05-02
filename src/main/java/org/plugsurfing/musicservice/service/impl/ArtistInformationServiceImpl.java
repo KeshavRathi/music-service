@@ -69,13 +69,9 @@ public class ArtistInformationServiceImpl implements ArtistInformationService {
             return this.wikipediaClient.getWikipediaInformation(this.getWikipediaTitle(wikiDataJson));
         }, (mbInfo, b) -> new ImmutablePair<ArtistMusicBainzInfoDto, WikipediaInfoDto>(mbInfo.getLeft(), b));
 
-        final Flux<ReleaseGroupsDto> flatMapIterable = artistMBInfo.flatMapIterable(value -> value.getReleaseGroups());
-        flatMapIterable
-                .flatMap(
-                        s -> this.coverArtArchiveClient.getArtistInformationByIdFromMusicBainz(s.getId(), s.getTitle()))
-                .collectList();
+        final Flux<ReleaseGroupsDto> releaseGroupsFlux = artistMBInfo.flatMapIterable(value -> value.getReleaseGroups());
 
-        final Mono<List<AlbumDto>> listOfAlbumDtoMono = flatMapIterable
+        final Mono<List<AlbumDto>> listOfAlbumDtoMono = releaseGroupsFlux
                 .flatMap(
                         s -> this.coverArtArchiveClient.getArtistInformationByIdFromMusicBainz(s.getId(), s.getTitle()))
                 .collectList();
