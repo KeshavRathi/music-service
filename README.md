@@ -92,15 +92,12 @@ http://localhost:8081/musify/music-artist/details/f27ec8db-af05-4f36-916e-3d57f9
 
 6. f27ec8db-af05-4f36-916e-3d57f91ecf5e (Michael Jackson)
 
+7. f27ec8db-af05-4f36-916e-3d57f91ecf6e (Invalid MBID)
+
 ## Solution And Assumptions
 
 Planned to use Reactive Spring boot as it is efficient in handling tens and thousands of requests per second. It works on the principle of event loop similar to Java Script. In this exercise I fetch the API responses from all the required APIs as Mono and then zip them together and make the final response DTO.
 
-## Short comings in current state
-1. Currently the list of cover art is not getting populated. Few experiments around it are in "test" branch.
-2. JSON Objects from API responses have been manipulated in raw form. Response DTOs can be created with the interested fields and rest fields can be ignored via Jackson Configuration.
-3. Custom exception handling has to be done.
+## Few Improvements
 
-## Proposed Improvements
-
-1. Add a custom exception and have a exception advice sending specific error codes from the APIs. For example, For invalid MBID, NOT FOUND error can be sent
+1. Custom Exception can be created and handled for failures
