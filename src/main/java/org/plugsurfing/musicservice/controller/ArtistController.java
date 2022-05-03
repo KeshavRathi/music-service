@@ -7,6 +7,7 @@ import org.apache.logging.log4j.Logger;
 import org.plugsurfing.musicservice.dto.ArtistInformationDto;
 import org.plugsurfing.musicservice.service.ArtistInformationService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -24,6 +25,7 @@ public class ArtistController {
     private ArtistInformationService artistInformationService;
 
     @GetMapping("/details/{mbid}")
+    @Cacheable("artist-information")
     public Mono<ArtistInformationDto> getArtistDetails(@PathVariable final UUID mbid) {
         logger.info("Received mbid : {}", mbid);
         final ArtistInformationDto artistInformationDto = new ArtistInformationDto();

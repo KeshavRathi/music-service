@@ -47,10 +47,7 @@ public class ArtistInformationServiceImpl implements ArtistInformationService {
 
         final Mono<ArtistMusicBainzInfoDto> artistMBInfo = this.mbClient.getArtistInformationByIdFromMusicBainz(mbId);
 
-        this.mbClient.getArtistInformationByIdFromMusicBainz(mbId) //
-                .subscribe(value -> logger.info("Dto->{}", value));
-
-        final Mono<Pair<ArtistMusicBainzInfoDto, String>> mono = artistMBInfo.zipWhen(mbInfo -> {
+        final Mono<Pair<ArtistMusicBainzInfoDto, String>> wikiDataInformationMono = artistMBInfo.zipWhen(mbInfo -> {
             final Optional<String> wikidataFromArtistInfo = mbInfo.getRelations().stream()
                     .filter(relation -> relation.getType().equals("wikidata")) //
                     .map(relation -> {
@@ -62,14 +59,15 @@ public class ArtistInformationServiceImpl implements ArtistInformationService {
             return this.wikiDataClient.getWikidataForId(wikidataFromArtistInfo.get());
         }, (mbInfo, b) -> new ImmutablePair<ArtistMusicBainzInfoDto, String>(mbInfo, b));
 
-        final Mono<Pair<ArtistMusicBainzInfoDto, WikipediaInfoDto>> wikipediaDataMono = mono.zipWhen(tuple -> {
+        final Mono<Pair<ArtistMusicBainzInfoDto, WikipediaInfoDto>> wikipediaDataMono = wikiDataInformationMono.zipWhen(tuple -> {
             final String wikiDataString = tuple.getRight();
             final JSONObject wikiDataJson = new JSONObject(wikiDataString);
             logger.info(this.getWikipediaTitle(wikiDataJson));
             return this.wikipediaClient.getWikipediaInformation(this.getWikipediaTitle(wikiDataJson));
         }, (mbInfo, b) -> new ImmutablePair<ArtistMusicBainzInfoDto, WikipediaInfoDto>(mbInfo.getLeft(), b));
 
-        final Flux<ReleaseGroupsDto> releaseGroupsFlux = artistMBInfo.flatMapIterable(value -> value.getReleaseGroups());
+        final Flux<ReleaseGroupsDto> releaseGroupsFlux = artistMBInfo
+                .flatMapIterable(value -> value.getReleaseGroups());
 
         final Mono<List<AlbumDto>> listOfAlbumDtoMono = releaseGroupsFlux
                 .flatMap(
