@@ -5,6 +5,7 @@ import java.util.UUID;
 import javax.annotation.PostConstruct;
 
 import org.plugsurfing.musicservice.client.dto.ArtistMusicBainzInfoDto;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
@@ -28,6 +29,13 @@ public class MusicBainzClient {
         return this.client.get().uri(uri)//
                 .accept(MediaType.APPLICATION_JSON)//
                 .retrieve()//
+                .onStatus(HttpStatus::is4xxClientError,
+                        response -> Mono.error(new RuntimeException("Artist not found, Please share a valid ID"))) // Can
+                                                                                                                   // be
+                                                                                                                   // replaced
+                                                                                                                   // by
+                                                                                                                   // custom
+                                                                                                                   // exception
                 .bodyToMono(ArtistMusicBainzInfoDto.class);
     }
 }
