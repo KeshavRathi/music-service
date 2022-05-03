@@ -28,7 +28,7 @@ public class CoverArtArchiveClient {
                 clientConnector(new ReactorClientHttpConnector(HttpClient.create().followRedirect(true))).build();
     }
 
-    public Mono<AlbumDto> getArtistInformationByIdFromMusicBainz(final UUID id, final String title) {
+    public Mono<AlbumDto> getCoverArtInformation(final UUID id, final String title) {
 
         final Mono<CoverArtArchiveDto> coverArtArchiveMono = this.client.get().uri(id.toString())//
                 .accept(MediaType.APPLICATION_JSON) //

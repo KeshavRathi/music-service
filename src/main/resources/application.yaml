@@ -2,11 +2,12 @@ server:
   port: 8081
 
 spring:
-  mvc:
-    servlet:
-      path: /musify
-
+  webflux.base-path: /musify
 
   jackson:
     serialization:
       FAIL_ON_EMPTY_BEANS: false
+
+logging:
+  level:
+    '[org.plugsurfing]': DEBUG

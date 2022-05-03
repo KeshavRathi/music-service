@@ -96,17 +96,11 @@ http://localhost:8081/musify/music-artist/details/f27ec8db-af05-4f36-916e-3d57f9
 
 Planned to use Reactive Spring boot as it is efficient in handling tens and thousands of requests per second. It works on the principle of event loop similar to Java Script. In this exercise I fetch the API responses from all the required APIs as Mono and then zip them together and make the final response DTO.
 
-I am assuming that all the requests to 3rd party APIs are successful. At the moment when loads of requests are sent to the server they actually return "Too Many Requests error"
-
-## Code files
-The main logic of the code is in ArtistInformationServiceImpl and ArtistController.
-
 ## Short comings in current state
 1. Currently the list of cover art is not getting populated. Few experiments around it are in "test" branch.
 2. JSON Objects from API responses have been manipulated in raw form. Response DTOs can be created with the interested fields and rest fields can be ignored via Jackson Configuration.
 3. Custom exception handling has to be done.
 
 ## Proposed Improvements
-1. Adding a Cache Manager and integrating Spring boot caching to cache API responses for given MBID. This will reduce the number of API calls to external system and will also be faster
 
-2. Add a custom exception and have a exception advice sending specific error codes from the APIs. For example, For invalid MBID, NOT FOUND error can be sent
+1. Add a custom exception and have a exception advice sending specific error codes from the APIs. For example, For invalid MBID, NOT FOUND error can be sent

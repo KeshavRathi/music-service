@@ -45,35 +45,24 @@ public class ArtistInformationServiceImpl implements ArtistInformationService {
     @Override
     public Mono<ArtistInformationDto> getArtistInformation(final UUID mbId) {
 
+        logger.info("Received request for Artist with MbId : {}", mbId);
+
         final Mono<ArtistMusicBainzInfoDto> artistMBInfo = this.mbClient.getArtistInformationByIdFromMusicBainz(mbId);
 
-        final Mono<Pair<ArtistMusicBainzInfoDto, String>> wikiDataInformationMono = artistMBInfo.zipWhen(mbInfo -> {
-            final Optional<String> wikidataFromArtistInfo = mbInfo.getRelations().stream()
-                    .filter(relation -> relation.getType().equals("wikidata")) //
-                    .map(relation -> {
-                        final String url = relation.getUrl().getResource();
-                        final int lastIndexOf = url.lastIndexOf("/");
-                        return url.substring(lastIndexOf + 1);
-                    }).findFirst();
-            logger.info("WikiData id: {}", wikidataFromArtistInfo.get());
-            return this.wikiDataClient.getWikidataForId(wikidataFromArtistInfo.get());
-        }, (mbInfo, b) -> new ImmutablePair<ArtistMusicBainzInfoDto, String>(mbInfo, b));
+        final Mono<Pair<ArtistMusicBainzInfoDto, String>> wikiDataInformationMono = this.fetchWikiData(artistMBInfo);
 
-        final Mono<Pair<ArtistMusicBainzInfoDto, WikipediaInfoDto>> wikipediaDataMono = wikiDataInformationMono.zipWhen(tuple -> {
-            final String wikiDataString = tuple.getRight();
-            final JSONObject wikiDataJson = new JSONObject(wikiDataString);
-            logger.info(this.getWikipediaTitle(wikiDataJson));
-            return this.wikipediaClient.getWikipediaInformation(this.getWikipediaTitle(wikiDataJson));
-        }, (mbInfo, b) -> new ImmutablePair<ArtistMusicBainzInfoDto, WikipediaInfoDto>(mbInfo.getLeft(), b));
+        final Mono<Pair<ArtistMusicBainzInfoDto, WikipediaInfoDto>> wikipediaDataMono = this
+                .fetchWikipediaInfo(wikiDataInformationMono);
 
-        final Flux<ReleaseGroupsDto> releaseGroupsFlux = artistMBInfo
-                .flatMapIterable(value -> value.getReleaseGroups());
+        final Mono<List<AlbumDto>> listOfAlbumDtoMono = this.fetchCoverArtInformation(artistMBInfo);
 
-        final Mono<List<AlbumDto>> listOfAlbumDtoMono = releaseGroupsFlux
-                .flatMap(
-                        s -> this.coverArtArchiveClient.getArtistInformationByIdFromMusicBainz(s.getId(), s.getTitle()))
-                .collectList();
+        return this.convertToArtistInformationDto(mbId, wikipediaDataMono, listOfAlbumDtoMono);
 
+    }
+
+    private Mono<ArtistInformationDto> convertToArtistInformationDto(final UUID mbId,
+            final Mono<Pair<ArtistMusicBainzInfoDto, WikipediaInfoDto>> wikipediaDataMono,
+            final Mono<List<AlbumDto>> listOfAlbumDtoMono) {
         return Mono.zip(wikipediaDataMono, listOfAlbumDtoMono, (tuple, albums) -> {
 
             final WikipediaInfoDto wikipediaData = tuple.getRight();
@@ -90,7 +79,39 @@ public class ArtistInformationServiceImpl implements ArtistInformationService {
 
             return dto;
         });
+    }
 
+    private Mono<List<AlbumDto>> fetchCoverArtInformation(final Mono<ArtistMusicBainzInfoDto> artistMBInfo) {
+        final Flux<ReleaseGroupsDto> releaseGroupsFlux = artistMBInfo
+                .flatMapIterable(value -> value.getReleaseGroups());
+
+        final Mono<List<AlbumDto>> listOfAlbumDtoMono = releaseGroupsFlux
+                .flatMap(s -> this.coverArtArchiveClient.getCoverArtInformation(s.getId(), s.getTitle())).collectList();
+        return listOfAlbumDtoMono;
+    }
+
+    private Mono<Pair<ArtistMusicBainzInfoDto, WikipediaInfoDto>> fetchWikipediaInfo(
+            final Mono<Pair<ArtistMusicBainzInfoDto, String>> wikiDataInformationMono) {
+        return wikiDataInformationMono.zipWhen(tuple -> {
+            final String wikiDataString = tuple.getRight();
+            final JSONObject wikiDataJson = new JSONObject(wikiDataString);
+            return this.wikipediaClient.getWikipediaInformation(this.getWikipediaTitle(wikiDataJson));
+        }, (mbInfo, b) -> new ImmutablePair<ArtistMusicBainzInfoDto, WikipediaInfoDto>(mbInfo.getLeft(), b));
+    }
+
+    private Mono<Pair<ArtistMusicBainzInfoDto, String>> fetchWikiData(
+            final Mono<ArtistMusicBainzInfoDto> artistMBInfo) {
+        return artistMBInfo.zipWhen(mbInfo -> {
+            final Optional<String> wikidataFromArtistInfo = mbInfo.getRelations().stream()
+                    .filter(relation -> relation.getType().equals("wikidata")) //
+                    .map(relation -> {
+                        final String url = relation.getUrl().getResource();
+                        final int lastIndexOf = url.lastIndexOf("/");
+                        return url.substring(lastIndexOf + 1);
+                    }).findFirst();
+            logger.debug("WikiData id: {}", wikidataFromArtistInfo.get());
+            return this.wikiDataClient.getWikidataForId(wikidataFromArtistInfo.get());
+        }, (mbInfo, b) -> new ImmutablePair<ArtistMusicBainzInfoDto, String>(mbInfo, b));
     }
 
     private String getWikipediaTitle(final JSONObject wikiDataJson) {
